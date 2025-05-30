@@ -1,0 +1,840 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Portfolio Galaxy Visualizer</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r134/three.min.js"></script>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@3.9.1/dist/chart.min.js"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;600&display=swap" rel="stylesheet">
+    <style>
+        body {
+            margin: 0;
+            overflow: hidden;
+            background: #0a0a23;
+            font-family: 'Poppins', sans-serif;
+            color: white;
+        }
+
+        #tooltip,
+        #slider-tooltip {
+            position: absolute;
+            background: linear-gradient(145deg, rgba(0, 0, 0, 0.9), rgba(30, 30, 50, 0.9));
+            color: white;
+            padding: 12px;
+            border-radius: 8px;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+            pointer-events: none;
+            display: none;
+            font-size: 14px;
+            max-width: 320px;
+            z-index: 10;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+        }
+
+        #space-background {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            pointer-events: none;
+            background: radial-gradient(circle at center, rgba(255, 255, 255, 0.05), transparent);
+            opacity: 0;
+            transition: opacity 2s ease-in;
+        }
+
+        #nebula {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            pointer-events: none;
+            animation: nebula-pulse 10s infinite ease-in-out;
+        }
+
+        @keyframes nebula-pulse {
+
+            0%,
+            100% {
+                opacity: 0.3;
+            }
+
+            50% {
+                opacity: 0.5;
+            }
+        }
+
+        #error-message {
+            display: none;
+            color: white;
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            text-align: center;
+        }
+
+        .slider-container {
+            background: linear-gradient(145deg, rgba(0, 0, 0, 0.7), rgba(30, 30, 50, 0.7));
+            padding: 12px;
+            border-radius: 8px;
+            backdrop-filter: blur(5px);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+        }
+
+        #timeSlider {
+            -webkit-appearance: none;
+            width: 100%;
+            height: 8px;
+            background: #4a5568;
+            border-radius: 4px;
+            outline: none;
+            opacity: 0.9;
+            transition: opacity 0.2s;
+        }
+
+        #timeSlider:hover {
+            opacity: 1;
+        }
+
+        #timeSlider::-webkit-slider-thumb {
+            -webkit-appearance: none;
+            appearance: none;
+            width: 20px;
+            height: 20px;
+            background: #60a5fa;
+            border-radius: 50%;
+            cursor: pointer;
+            box-shadow: 0 0 5px rgba(0, 0, 0, 0.3);
+        }
+
+        .constellation-label {
+            position: absolute;
+            color: white;
+            font-size: 14px;
+            pointer-events: none;
+            background: rgba(0, 0, 0, 0.5);
+            padding: 4px 8px;
+            border-radius: 4px;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+        }
+
+        #dashboard {
+            background: linear-gradient(145deg, rgba(0, 0, 0, 0.7), rgba(30, 30, 50, 0.7));
+            backdrop-filter: blur(5px);
+            border-radius: 8px;
+            padding: 20px;
+            max-height: 80vh;
+            overflow-y: auto;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+        }
+
+        #portfolio-chart {
+            max-height: 150px;
+        }
+
+        #legend {
+            background: linear-gradient(145deg, rgba(0, 0, 0, 0.7), rgba(30, 30, 50, 0.7));
+            backdrop-filter: blur(5px);
+            border-radius: 8px;
+            padding: 12px;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+        }
+
+        .insight-card,
+        .suggestion-card {
+            background: rgba(255, 255, 255, 0.05);
+            padding: 10px;
+            border-radius: 6px;
+            margin-top: 10px;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+        }
+    </style>
+</head>
+
+<body class="bg-gray-900">
+    <div id="space-background"></div>
+    <div id="nebula"></div>
+    <div class="absolute top-4 left-4 text-white">
+        <h1 class="text-3xl font-bold mb-4 text-blue-400">Portfolio Galaxy Visualizer</h1>
+        <div class="slider-container w-80">
+            <label for="timeSlider" class="block text-sm font-medium mb-1">Time Travel</label>
+            <input type="range" id="timeSlider" min="0" max="100" value="100" class="w-full">
+            <span id="timeLabel" class="text-sm mt-1 block"></span>
+        </div>
+    </div>
+    <div class="absolute top-4 right-4 text-white w-72" id="dashboard">
+        <h2 class="text-xl font-bold mb-4 text-blue-300">Portfolio Overview</h2>
+        <div class="space-y-3">
+            <div class="flex items-center">
+                <svg class="w-5 h-5 mr-2 text-blue-400" fill="currentColor" viewBox="0 0 20 20">
+                    <path
+                        d="M10 2a8 8 0 100 16 8 8 0 000-16zm0 14a6 6 0 110-12 6 6 0 010 12zm-1-6a1 1 0 112 0v3a1 1 0 11-2 0v-3zm1-2a1 1 0 110-2 1 1 0 010 2z" />
+                </svg>
+                <p><strong>Total Value:</strong> <span id="totalValue">₹0</span></p>
+            </div>
+            <div class="flex items-center">
+                <svg class="w-5 h-5 mr-2 text-blue-400" fill="currentColor" viewBox="0 0 20 20">
+                    <path fill-rule="evenodd"
+                        d="M10 18a8 8 0 100-16 8 8 0 000 16zm-1-11a1 1 0 112 0v4a1 1 0 01-2 0V7zm1 8a1 1 0 100-2 1 1 0 000 2z"
+                        clip-rule="evenodd" />
+                </svg>
+                <p><strong>Health Score:</strong> <span id="healthScore">0%</span></p>
+            </div>
+            <div class="flex items-center">
+                <svg class="w-5 h-5 mr-2 text-blue-400" fill="currentColor" viewBox="0 0 20 20">
+                    <path
+                        d="M10 2a8 8 0 100 16 8 8 0 000 16zm0 14a6 6 0 110-12 6 6 0 010 12zm-2-4l2-2 2 2 2-2 2 2-4 4-4-4z" />
+                </svg>
+                <p><strong>Volatility:</strong> <span id="volatility">0</span></p>
+            </div>
+            <div class="flex items-center">
+                <svg class="w-5 h-5 mr-2 text-blue-400" fill="currentColor" viewBox="0 0 20 20">
+                    <path
+                        d="M2 11a1 1 0 011-1h14a1 1 0 110 2H3a1 1 0 01-1-1zm3-6a1 1 0 011-1h8a1 1 0 110 2H6a1 1 0 01-1-1zm4 8a1 1 0 011-1h4a1 1 0 110 2h-4a1 1 0 01-1-1z" />
+                </svg>
+                <p><strong>Diversification:</strong> <span id="diversificationScore">0</span></p>
+            </div>
+            <div class="flex items-center">
+                <svg class="w-5 h-5 mr-2 text-blue-400" fill="currentColor" viewBox="0 0 20 20">
+                    <path fill-rule="evenodd"
+                        d="M10 18a8 8 0 100-16 8 8 0 000 16zm1-12a1 1 0 10-2 0v4a1 1 0 00.293.707l2.828 2.829a1 1 0 101.414-1.414L11 9.586V6z"
+                        clip-rule="evenodd" />
+                </svg>
+                <p><strong>Risk Level:</strong> <span id="riskLevel">Low</span></p>
+            </div>
+        </div>
+        <div class="mt-4">
+            <h3 class="text-lg font-semibold text-blue-300 mb-2">Historical Trend</h3>
+            <canvas id="portfolio-chart" class="mt-2"></canvas>
+        </div>
+        <div class="mt-4">
+            <h3 class="text-lg font-semibold text-blue-300 mb-2">Insights</h3>
+            <div id="insights" class="space-y-2"></div>
+        </div>
+        <div class="mt-4">
+            <h3 class="text-lg font-semibold text-blue-300 mb-2">Trading Suggestions</h3>
+            <div id="suggestions" class="space-y-2"></div>
+            <p class="text-xs text-gray-400 mt-2">Data Source: Real-time data from Trading Analyst API</p>
+        </div>
+    </div>
+    <div class="absolute bottom-4 left-1/2 transform -translate-x-1/2 text-white text-center" id="legend">
+        <h3 class="text-sm font-semibold mb-2">Legend</h3>
+        <p class="text-xs"><span class="inline-block w-3 h-3 bg-green-500 rounded-full mr-1"></span> Positive Change</p>
+        <p class="text-xs"><span class="inline-block w-3 h-3 bg-red-500 rounded-full mr-1"></span> Negative Change</p>
+        <p class="text-xs"><span class="inline-block w-3 h-3 bg-yellow-400 rounded-full mr-1"></span> Star Size = Stock
+            Value</p>
+        <p class="text-xs"><span class="inline-block w-3 h-3 bg-blue-400 rounded-full mr-1"></span> Ring Size =
+            Volatility</p>
+    </div>
+    <div id="tooltip"></div>
+    <div id="slider-tooltip"></div>
+    <div id="error-message">
+        <h2 class="text-xl font-bold">Failed to Load Visualizer</h2>
+        <p>Check the browser console for errors (F12 → Console).</p>
+    </div>
+
+    <script>
+        let scene, camera, renderer, raycaster, mouse;
+        let constellations = [], stars = [], constellationLabels = [];
+        let portfolioData = null;
+        let chart = null;
+        const nebula = document.getElementById('nebula');
+        const errorMessage = document.getElementById('error-message');
+
+        // Initialize Three.js Scene
+        function init() {
+            try {
+                scene = new THREE.Scene();
+                camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
+                renderer = new THREE.WebGLRenderer({ antialias: true });
+                renderer.setSize(window.innerWidth, window.innerHeight);
+                renderer.setClearColor(0x0a0a23);
+                document.body.appendChild(renderer.domElement);
+
+                camera.position.set(0, 0, 20);
+                camera.lookAt(0, 0, 0);
+
+                const ambientLight = new THREE.AmbientLight(0xffffff, 0.4);
+                scene.add(ambientLight);
+                const directionalLight = new THREE.DirectionalLight(0xffffff, 0.8);
+                directionalLight.position.set(5, 5, 5);
+                scene.add(directionalLight);
+
+                // Add background stars
+                const starGeometry = new THREE.BufferGeometry();
+                const starMaterial = new THREE.PointsMaterial({ color: 0xe5e7eb, size: 0.1 });
+                const starVertices = [];
+                for (let i = 0; i < 800; i++) {
+                    starVertices.push(
+                        (Math.random() - 0.5) * 100,
+                        (Math.random() - 0.5) * 100,
+                        (Math.random() - 0.5) * 100
+                    );
+                }
+                starGeometry.setAttribute('position', new THREE.Float32BufferAttribute(starVertices, 3));
+                const backgroundStars = new THREE.Points(starGeometry, starMaterial);
+                scene.add(backgroundStars);
+
+                // Add particle effects
+                const particleGeometry = new THREE.BufferGeometry();
+                const particleMaterial = new THREE.PointsMaterial({ color: 0x93c5fd, size: 0.05, transparent: true, opacity: 0.5 });
+                const particleVertices = [];
+                for (let i = 0; i < 300; i++) {
+                    particleVertices.push(
+                        (Math.random() - 0.5) * 80,
+                        (Math.random() - 0.5) * 80,
+                        (Math.random() - 0.5) * 80
+                    );
+                }
+                particleGeometry.setAttribute('position', new THREE.Float32BufferAttribute(particleVertices, 3));
+                const particles = new THREE.Points(particleGeometry, particleMaterial);
+                scene.add(particles);
+
+                raycaster = new THREE.Raycaster();
+                mouse = new THREE.Vector2();
+
+                window.addEventListener('mousemove', onMouseMove, false);
+                window.addEventListener('resize', onWindowResize, false);
+                document.getElementById('timeSlider').addEventListener('input', onTimeSliderChange);
+                document.getElementById('timeSlider').addEventListener('mousemove', onSliderHover);
+            } catch (error) {
+                console.error('Error initializing Three.js:', error);
+                errorMessage.style.display = 'block';
+            }
+        }
+
+        // Fetch Portfolio Data
+        async function fetchPortfolioData() {
+            try {
+                const response = await fetch('http://localhost:5001/api/portfolio');
+                if (!response.ok) {
+                    throw new Error(`HTTP error! Status: ${response.status}`);
+                }
+                portfolioData = await response.json();
+                console.log('Portfolio Data:', portfolioData);
+                createPortfolioGalaxy();
+                updateDashboard();
+                document.getElementById('space-background').style.opacity = 1;
+            } catch (error) {
+                console.error('Error fetching portfolio data:', error);
+                errorMessage.style.display = 'block';
+            }
+        }
+
+        // Create Portfolio Galaxy
+        function createPortfolioGalaxy() {
+            try {
+                const sectors = Object.keys(portfolioData.sector_exposure);
+                const radius = 10;
+                const angleStep = (2 * Math.PI) / sectors.length;
+
+                sectors.forEach((sector, index) => {
+                    const exposure = portfolioData.sector_exposure[sector];
+                    const constellationX = radius * Math.cos(index * angleStep);
+                    const constellationY = radius * Math.sin(index * angleStep);
+                    const constellationZ = (Math.random() - 0.5) * 2;
+
+                    // Calculate sector metrics
+                    const stocksInSector = portfolioData.stocks.filter(stock => stock.sector === sector);
+                    const sectorValue = stocksInSector.reduce((sum, stock) => sum + stock.value, 0);
+                    const avgChange = stocksInSector.reduce((sum, stock) => sum + stock.change_percent, 0) / stocksInSector.length;
+
+                    // Create constellation (group of stars)
+                    const constellationGroup = new THREE.Group();
+                    constellationGroup.position.set(constellationX, constellationY, constellationZ);
+                    scene.add(constellationGroup);
+
+                    // Add volatility ring
+                    const volatility = portfolioData.portfolio_volatility;
+                    const ringRadius = 3 + volatility * 5;
+                    const ringGeometry = new THREE.RingGeometry(ringRadius - 0.05, ringRadius, 32);
+                    const ringMaterial = new THREE.MeshBasicMaterial({ color: 0x60a5fa, side: THREE.DoubleSide, transparent: true, opacity: 0.4 });
+                    const ring = new THREE.Mesh(ringGeometry, ringMaterial);
+                    ring.rotation.x = Math.PI / 2;
+                    constellationGroup.add(ring);
+
+                    constellations.push({ group: constellationGroup, sector, exposure, value: sectorValue, avgChange, numStocks: stocksInSector.length });
+
+                    // Add constellation label
+                    const label = document.createElement('div');
+                    label.className = 'constellation-label';
+                    label.textContent = `${sector} (${exposure.toFixed(1)}%)`;
+                    document.body.appendChild(label);
+                    constellationLabels.push({ element: label, position: constellationGroup.position });
+
+                    // Add stocks as stars with trails
+                    stocksInSector.forEach((stock, stockIndex) => {
+                        const starSize = Math.max(stock.value * 0.002, 0.2);
+                        const brightness = Math.abs(stock.change_percent) * 0.02 + 0.6;
+                        const starColor = stock.change_percent >= 0 ? 0x34d399 : 0xf87171;
+                        const starGeometry = new THREE.SphereGeometry(starSize, 16, 16);
+                        const starMaterial = new THREE.MeshBasicMaterial({ color: starColor, opacity: brightness, transparent: true });
+                        const star = new THREE.Mesh(starGeometry, starMaterial);
+                        star.position.set(
+                            (Math.random() - 0.5) * 2.5,
+                            (Math.random() - 0.5) * 2.5,
+                            (Math.random() - 0.5) * 2.5
+                        );
+                        // Calculate trading suggestion for the stock
+                        let suggestion = 'Hold';
+                        const priceDiff = ((stock.predicted_price - stock.current_price) / stock.current_price) * 100;
+                        if (priceDiff > 5) {
+                            suggestion = 'Buy';
+                        } else if (priceDiff < -5 || stock.change_percent < -3) {
+                            suggestion = 'Sell';
+                        }
+                        star.userData = {
+                            stock: stock.name,
+                            sector: stock.sector,
+                            current_price: stock.current_price,
+                            predicted_price: stock.predicted_price,
+                            change_percent: stock.change_percent,
+                            value: stock.value,
+                            baseSize: starSize,
+                            suggestion: suggestion
+                        };
+                        constellationGroup.add(star);
+                        stars.push(star);
+
+                        // Add glow effect
+                        const glowMaterial = new THREE.MeshBasicMaterial({ color: starColor, transparent: true, opacity: 0.4 });
+                        const glowGeometry = new THREE.SphereGeometry(starSize * 1.5, 16, 16);
+                        const glow = new THREE.Mesh(glowGeometry, glowMaterial);
+                        star.add(glow);
+
+                        // Add historical trail
+                        const trailGeometry = new THREE.BufferGeometry();
+                        const trailMaterial = new THREE.LineBasicMaterial({ color: starColor, transparent: true, opacity: 0.2 });
+                        const trailVertices = [];
+                        const historicalValues = portfolioData.historical_data.values;
+                        const numPoints = 8;
+                        for (let i = 0; i < numPoints; i++) {
+                            const t = i / (numPoints - 1);
+                            const idx = Math.floor(t * (historicalValues.length - 1));
+                            const scale = historicalValues[idx] / historicalValues[historicalValues.length - 1];
+                            const offset = -t * 1.5;
+                            trailVertices.push(
+                                star.position.x + offset,
+                                star.position.y,
+                                star.position.z
+                            );
+                        }
+                        trailGeometry.setAttribute('position', new THREE.Float32BufferAttribute(trailVertices, 3));
+                        const trail = new THREE.Line(trailGeometry, trailMaterial);
+                        star.add(trail);
+                    });
+                });
+
+                // Update nebula based on health score
+                const healthScore = portfolioData.health_score;
+                if (healthScore > 80) {
+                    nebula.style.background = 'radial-gradient(circle, rgba(52, 211, 153, 0.4), transparent)';
+                } else if (healthScore > 50) {
+                    nebula.style.background = 'radial-gradient(circle, rgba(251, 191, 36, 0.4), transparent)';
+                } else {
+                    nebula.style.background = 'radial-gradient(circle, rgba(248, 113, 113, 0.4), transparent)';
+                }
+            } catch (error) {
+                console.error('Error creating portfolio galaxy:', error);
+                errorMessage.style.display = 'block';
+            }
+        }
+
+        // Update Dashboard
+        function updateDashboard() {
+            try {
+                document.getElementById('totalValue').textContent = `₹${portfolioData.total_value.toFixed(2)}`;
+                document.getElementById('healthScore').textContent = `${portfolioData.health_score.toFixed(1)}%`;
+                document.getElementById('volatility').textContent = portfolioData.portfolio_volatility.toFixed(2);
+                document.getElementById('diversificationScore').textContent = calculateDiversificationScore().toFixed(1);
+
+                // Calculate Risk Level
+                const healthScore = portfolioData.health_score;
+                const volatility = portfolioData.portfolio_volatility;
+                let riskLevel = 'Low';
+                if (healthScore < 50 || volatility > 0.5) {
+                    riskLevel = 'High';
+                } else if (healthScore < 80 || volatility > 0.3) {
+                    riskLevel = 'Medium';
+                }
+                document.getElementById('riskLevel').textContent = riskLevel;
+
+                // Create historical chart with annotations
+                const ctx = document.getElementById('portfolio-chart').getContext('2d');
+                const historicalValues = portfolioData.historical_data.values;
+                const historicalDates = portfolioData.historical_data.dates;
+                const maxValueIndex = historicalValues.indexOf(Math.max(...historicalValues));
+                const minValueIndex = historicalValues.indexOf(Math.min(...historicalValues));
+                const upwardTrendIndices = findUpwardTrends(historicalValues);
+                chart = new Chart(ctx, {
+                    type: 'line',
+                    data: {
+                        labels: historicalDates,
+                        datasets: [
+                            {
+                                label: 'Portfolio Value',
+                                data: historicalValues,
+                                borderColor: '#60a5fa',
+                                backgroundColor: 'rgba(96, 165, 250, 0.2)',
+                                fill: true,
+                                tension: 0.3,
+                                pointRadius: 0
+                            },
+                            {
+                                label: 'Benchmark (Avg Market)',
+                                data: historicalValues.map(v => v * 0.95),
+                                borderColor: '#a1a1aa',
+                                borderDash: [5, 5],
+                                pointRadius: 0
+                            }
+                        ]
+                    },
+                    options: {
+                        responsive: true,
+                        maintainAspectRatio: false,
+                        scales: {
+                            x: { display: false },
+                            y: { display: false }
+                        },
+                        plugins: {
+                            legend: { display: false },
+                            tooltip: { enabled: false },
+                            annotation: {
+                                annotations: {
+                                    max: {
+                                        type: 'point',
+                                        xValue: maxValueIndex,
+                                        yValue: historicalValues[maxValueIndex],
+                                        backgroundColor: '#34d399',
+                                        radius: 5
+                                    },
+                                    min: {
+                                        type: 'point',
+                                        xValue: minValueIndex,
+                                        yValue: historicalValues[minValueIndex],
+                                        backgroundColor: '#f87171',
+                                        radius: 5
+                                    },
+                                    ...upwardTrendIndices.reduce((acc, idx, i) => {
+                                        acc[`trend${i}`] = {
+                                            type: 'point',
+                                            xValue: idx,
+                                            yValue: historicalValues[idx],
+                                            backgroundColor: '#60a5fa',
+                                            radius: 4
+                                        };
+                                        return acc;
+                                    }, {})
+                                }
+                            }
+                        }
+                    }
+                });
+
+                // Add insights
+                const insightsDiv = document.getElementById('insights');
+                const insights = generateInsights();
+                insights.forEach(insight => {
+                    const insightCard = document.createElement('div');
+                    insightCard.className = 'insight-card text-xs';
+                    insightCard.textContent = insight;
+                    insightsDiv.appendChild(insightCard);
+                });
+
+                // Add trading suggestions
+                const suggestionsDiv = document.getElementById('suggestions');
+                const suggestions = generateTradingSuggestions();
+                suggestions.forEach(suggestion => {
+                    const suggestionCard = document.createElement('div');
+                    suggestionCard.className = 'suggestion-card text-xs';
+                    suggestionCard.textContent = suggestion;
+                    suggestionsDiv.appendChild(suggestionCard);
+                });
+            } catch (error) {
+                console.error('Error updating dashboard:', error);
+            }
+        }
+
+        // Calculate Diversification Score
+        function calculateDiversificationScore() {
+            const sectorExposure = portfolioData.sector_exposure;
+            const numSectors = Object.keys(sectorExposure).length;
+            const idealExposure = 100 / numSectors;
+            const deviation = Object.values(sectorExposure).reduce((sum, exposure) => sum + Math.abs(exposure - idealExposure), 0);
+            return Math.max(0, 100 - deviation);
+        }
+
+        // Find Upward Trends in Historical Data
+        function findUpwardTrends(values) {
+            const indices = [];
+            for (let i = 2; i < values.length; i++) {
+                if (values[i] > values[i - 1] && values[i - 1] > values[i - 2]) {
+                    indices.push(i);
+                }
+            }
+            return indices.slice(-3); // Show up to 3 recent trends
+        }
+
+        // Generate Insights
+        function generateInsights() {
+            const insights = [];
+            const sectorExposure = portfolioData.sector_exposure;
+            const maxExposure = Math.max(...Object.values(sectorExposure));
+            const dominantSector = Object.keys(sectorExposure).find(sector => sectorExposure[sector] === maxExposure);
+            if (maxExposure > 40) {
+                insights.push(`Your portfolio is heavily weighted in ${dominantSector} (${maxExposure.toFixed(1)}%). Consider diversifying to reduce risk.`);
+            }
+            const healthScore = portfolioData.health_score;
+            if (healthScore < 60) {
+                insights.push(`Your portfolio health is low (${healthScore.toFixed(1)}%). Focus on stocks with stronger fundamentals.`);
+            } else if (healthScore > 80) {
+                insights.push(`Great job! Your portfolio health is strong (${healthScore.toFixed(1)}%). Keep monitoring for opportunities.`);
+            }
+            const volatility = portfolioData.portfolio_volatility;
+            if (volatility > 0.5) {
+                insights.push(`High volatility (${volatility.toFixed(2)}) detected. Consider more stable investments to balance your portfolio.`);
+            }
+            const topStock = portfolioData.stocks.reduce((a, b) => a.change_percent > b.change_percent ? a : b);
+            insights.push(`Top performer: ${topStock.name} with a ${topStock.change_percent.toFixed(1)}% gain.`);
+            const bottomStock = portfolioData.stocks.reduce((a, b) => a.change_percent < b.change_percent ? a : b);
+            if (bottomStock.change_percent < -3) {
+                insights.push(`Underperformer: ${bottomStock.name} with a ${bottomStock.change_percent.toFixed(1)}% loss. Consider reviewing its fundamentals.`);
+            }
+            // Historical trend insight
+            const historicalValues = portfolioData.historical_data.values;
+            const recentValues = historicalValues.slice(-5);
+            const isTrendingUp = recentValues.every((val, i) => i === 0 || val >= recentValues[i - 1]);
+            if (isTrendingUp) {
+                insights.push(`Your portfolio has been trending upward recently, indicating positive momentum.`);
+            }
+            return insights;
+        }
+
+        // Generate Trading Suggestions
+        function generateTradingSuggestions() {
+            const suggestions = [];
+
+            // Stock-level suggestions
+            portfolioData.stocks.forEach(stock => {
+                const priceDiff = ((stock.predicted_price - stock.current_price) / stock.current_price) * 100;
+                if (priceDiff > 5) {
+                    suggestions.push(`Buy ${stock.name}: Predicted price (₹${stock.predicted_price.toFixed(2)}) is ${priceDiff.toFixed(1)}% above current price (₹${stock.current_price.toFixed(2)}).`);
+                } else if (priceDiff < -5 || stock.change_percent < -3) {
+                    suggestions.push(`Sell ${stock.name}: Recent performance (${stock.change_percent.toFixed(1)}%) and predicted price (₹${stock.predicted_price.toFixed(2)}) suggest a potential decline.`);
+                }
+            });
+
+            // Sector-level suggestions
+            const sectorExposure = portfolioData.sector_exposure;
+            const maxExposure = Math.max(...Object.values(sectorExposure));
+            const dominantSector = Object.keys(sectorExposure).find(sector => sectorExposure[sector] === maxExposure);
+            if (maxExposure > 40) {
+                suggestions.push(`Rebalance ${dominantSector}: Exposure (${maxExposure.toFixed(1)}%) is high. Consider reducing allocation to diversify risk.`);
+            }
+            const underperformingSector = Object.keys(sectorExposure).reduce((a, b) => {
+                const stocksA = portfolioData.stocks.filter(stock => stock.sector === a);
+                const stocksB = portfolioData.stocks.filter(stock => stock.sector === b);
+                const avgChangeA = stocksA.reduce((sum, stock) => sum + stock.change_percent, 0) / stocksA.length;
+                const avgChangeB = stocksB.reduce((sum, stock) => sum + stock.change_percent, 0) / stocksB.length;
+                return avgChangeA < avgChangeB ? a : b;
+            });
+            const underperformingStocks = portfolioData.stocks.filter(stock => stock.sector === underperformingSector);
+            const avgChange = underperformingStocks.reduce((sum, stock) => sum + stock.change_percent, 0) / underperformingStocks.length;
+            if (avgChange < 0) {
+                suggestions.push(`Review ${underperformingSector}: Average change (${avgChange.toFixed(1)}%) indicates underperformance. Consider reallocating.`);
+            }
+
+            // Portfolio-level suggestions
+            const volatility = portfolioData.portfolio_volatility;
+            const healthScore = portfolioData.health_score;
+            if (volatility > 0.5) {
+                suggestions.push(`Reduce Risk: High volatility (${volatility.toFixed(2)}) suggests adding more stable stocks or bonds to your portfolio.`);
+            }
+            const diversificationScore = calculateDiversificationScore();
+            if (diversificationScore < 60) {
+                suggestions.push(`Increase Diversification: Score (${diversificationScore.toFixed(1)}) is low. Add stocks from underrepresented sectors like ${findUnderrepresentedSector()}.`);
+            }
+            if (healthScore > 80) {
+                suggestions.push(`Capitalize on Strength: Portfolio health (${healthScore.toFixed(1)}%) is strong. Consider increasing investments in top performers.`);
+            }
+
+            // Momentum-based suggestion
+            const historicalValues = portfolioData.historical_data.values;
+            const recentValues = historicalValues.slice(-30);
+            const isTrendingUp = recentValues.every((val, i) => i === 0 || val >= recentValues[i - 1]);
+            if (isTrendingUp) {
+                suggestions.push(`Leverage Momentum: Portfolio has shown consistent growth over the past 30 days. Consider buying more of your top performers.`);
+            }
+
+            return suggestions.length > 0 ? suggestions : ['No immediate trading suggestions. Monitor your portfolio for opportunities.'];
+        }
+
+        // Find Underrepresented Sector
+        function findUnderrepresentedSector() {
+            const sectorExposure = portfolioData.sector_exposure;
+            const minExposure = Math.min(...Object.values(sectorExposure));
+            return Object.keys(sectorExposure).find(sector => sectorExposure[sector] === minExposure);
+        }
+
+        // Time Travel Mode
+        function onTimeSliderChange() {
+            try {
+                const sliderValue = parseInt(document.getElementById('timeSlider').value);
+                const historicalDates = portfolioData.historical_data.dates;
+                const historicalValues = portfolioData.historical_data.values;
+                const index = Math.floor((sliderValue / 100) * (historicalDates.length - 1));
+                document.getElementById('timeLabel').textContent = historicalDates[index];
+
+                const scaleFactor = historicalValues[index] / historicalValues[historicalValues.length - 1];
+                stars.forEach(star => {
+                    const baseSize = star.userData.baseSize;
+                    const newScale = scaleFactor * baseSize;
+                    star.scale.set(newScale / baseSize, newScale / baseSize, newScale / baseSize);
+                    star.children[0].scale.set(newScale / baseSize, newScale / baseSize, newScale / baseSize);
+                });
+            } catch (error) {
+                console.error('Error in time slider:', error);
+            }
+        }
+
+        // Slider Tooltip
+        function onSliderHover(event) {
+            try {
+                const sliderValue = parseInt(document.getElementById('timeSlider').value);
+                const historicalDates = portfolioData.historical_data.dates;
+                const historicalValues = portfolioData.historical_data.values;
+                const index = Math.floor((sliderValue / 100) * (historicalDates.length - 1));
+
+                const tooltip = document.getElementById('slider-tooltip');
+                tooltip.style.display = 'block';
+                tooltip.style.left = event.clientX + 15 + 'px';
+                tooltip.style.top = event.clientY + 15 + 'px';
+                tooltip.innerHTML = `
+                    <strong>Date:</strong> ${historicalDates[index]}<br>
+                    <strong>Portfolio Value:</strong> ₹${historicalValues[index].toFixed(2)}
+                `;
+            } catch (error) {
+                console.error('Error in slider hover:', error);
+            }
+        }
+
+        // Tooltip on Hover
+        function onMouseMove(event) {
+            try {
+                mouse.x = (event.clientX / window.innerWidth) * 2 - 1;
+                mouse.y = -(event.clientY / window.innerHeight) * 2 + 1;
+
+                raycaster.setFromCamera(mouse, camera);
+                const intersectsStars = raycaster.intersectObjects(stars);
+                const intersectsConstellations = constellations.map(c => c.group).filter(g => raycaster.intersectObject(g, true).length > 0);
+
+                const tooltip = document.getElementById('tooltip');
+                if (intersectsStars.length > 0) {
+                    const star = intersectsStars[0].object;
+                    const data = star.userData;
+                    tooltip.style.display = 'block';
+                    tooltip.style.left = event.clientX + 15 + 'px';
+                    tooltip.style.top = event.clientY + 15 + 'px';
+                    tooltip.innerHTML = `
+                        <strong>${data.stock}</strong><br>
+                        Sector: ${data.sector}<br>
+                        Current Price: ₹${data.current_price.toFixed(2)}<br>
+                        Predicted Price: ₹${data.predicted_price.toFixed(2)}<br>
+                        Change: ${data.change_percent.toFixed(1)}%<br>
+                        Value: ₹${data.value.toFixed(2)}<br>
+                        <strong>Suggested Action:</strong> ${data.suggestion}<br>
+                        <em>Tip: A high predicted price suggests potential growth.</em>
+                    `;
+                    star.scale.set(1.2, 1.2, 1.2);
+                    star.children[0].scale.set(1.2, 1.2, 1.2);
+                } else if (intersectsConstellations.length > 0) {
+                    const constellation = constellations.find(c => c.group === intersectsConstellations[0].object);
+                    const suggestion = constellation.exposure > 40 ? 'Reduce Exposure' : constellation.avgChange < 0 ? 'Review Allocation' : 'Monitor';
+                    tooltip.style.display = 'block';
+                    tooltip.style.left = event.clientX + 15 + 'px';
+                    tooltip.style.top = event.clientY + 15 + 'px';
+                    tooltip.innerHTML = `
+                        <strong>${constellation.sector}</strong><br>
+                        Exposure: ${constellation.exposure.toFixed(1)}%<br>
+                        Total Value: ₹${constellation.value.toFixed(2)}<br>
+                        Avg Change: ${constellation.avgChange.toFixed(1)}%<br>
+                        Stocks: ${constellation.numStocks}<br>
+                        <strong>Suggested Action:</strong> ${suggestion}<br>
+                        <em>Tip: High exposure in one sector may increase risk.</em>
+                    `;
+                    constellation.group.scale.set(1.1, 1.1, 1.1);
+                } else {
+                    tooltip.style.display = 'none';
+                    stars.forEach(star => {
+                        star.scale.set(1, 1, 1);
+                        star.children[0].scale.set(1, 1, 1);
+                    });
+                    constellations.forEach(c => c.group.scale.set(1, 1, 1));
+                }
+            } catch (error) {
+                console.error('Error in mouse move:', error);
+            }
+        }
+
+        // Update Constellation Labels Position
+        function updateConstellationLabels() {
+            constellationLabels.forEach(label => {
+                const vector = label.position.clone().project(camera);
+                const x = (vector.x + 1) / 2 * window.innerWidth;
+                const y = -(vector.y - 1) / 2 * window.innerHeight;
+                label.element.style.left = x + 10 + 'px';
+                label.element.style.top = y + 'px';
+            });
+        }
+
+        function onWindowResize() {
+            try {
+                camera.aspect = window.innerWidth / window.innerHeight;
+                camera.updateProjectionMatrix();
+                renderer.setSize(window.innerWidth, window.innerHeight);
+            } catch (error) {
+                console.error('Error in window resize:', error);
+            }
+        }
+
+        // Animation Loop
+        function animate() {
+            try {
+                requestAnimationFrame(animate);
+                constellations.forEach(constellation => {
+                    constellation.group.rotation.y += 0.001;
+                    constellation.group.rotation.z += 0.0005;
+                });
+                stars.forEach(star => {
+                    const twinkle = Math.sin(Date.now() * 0.005 + star.position.x) * 0.15 + 0.85;
+                    star.material.opacity = twinkle;
+                    star.children[0].material.opacity = twinkle * 0.4;
+
+                    if (star.userData.change_percent > 5) {
+                        const sparkle = Math.random();
+                        if (sparkle > 0.98) {
+                            star.children[0].material.opacity = 0.8;
+                        }
+                    }
+                });
+                updateConstellationLabels();
+                renderer.render(scene, camera);
+            } catch (error) {
+                console.error('Error in animation loop:', error);
+                errorMessage.style.display = 'block';
+            }
+        }
+
+        init();
+        fetchPortfolioData();
+        animate();
+    </script>
+</body>
+
+</html>
